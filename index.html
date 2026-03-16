@@ -742,16 +742,21 @@
     -->
     <model-viewer
       id="mv"
-      src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+      src="https://raw.githubusercontent.com/Wasay-911/Zinger-Burger-Model/main/Zinger%20Demo.glb"
       ar
       ar-modes="webxr scene-viewer quick-look"
+      ar-placement="floor"
+      ar-scale="fixed"
+      xr-environment
       camera-controls
       auto-rotate
-      auto-rotate-delay="1000"
-      rotation-per-second="20deg"
-      shadow-intensity="1"
-      exposure="0.8"
-      poster="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=70&auto=format"
+      auto-rotate-delay="800"
+      rotation-per-second="18deg"
+      shadow-intensity="2.5"
+      shadow-softness="0.9"
+      environment-image="neutral"
+      exposure="1.1"
+      touch-action="pan-y"
       loading="eager"
       reveal="auto"
     >
@@ -785,6 +790,21 @@
         Place on Table
       </button>
     </model-viewer>
+
+    <!-- Model loading indicator -->
+    <div id="mv-loading" style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+      color: rgba(255,255,255,0.5);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      pointer-events: none;
+      text-align: center;
+    ">Loading model… 0%</div>
 
     <!-- Close -->
     <button class="close-btn" onclick="closeAR()">
@@ -828,11 +848,27 @@
 
 
   <script>
-    // ── State ──────────────────────────────────────────────────
     const menuScreen = document.getElementById('menu-screen');
     const arScreen   = document.getElementById('ar-screen');
     const toast      = document.getElementById('toast');
+    const mv         = document.getElementById('mv');
 
+    // Track model load state
+    let mvLoaded = false;
+    mv.addEventListener('load', () => {
+      mvLoaded = true;
+      const el = document.getElementById('mv-loading');
+      if (el) el.style.display = 'none';
+    });
+    mv.addEventListener('progress', (e) => {
+      const pct = Math.round(e.detail.totalProgress * 100);
+      const el = document.getElementById('mv-loading');
+      if (el && pct < 100) el.textContent = 'Loading model… ' + pct + '%';
+    });
+    mv.addEventListener('error', () => {
+      const el = document.getElementById('mv-loading');
+      if (el) el.textContent = '⚠ Model failed — check the GLB URL';
+    });
     // ── Open AR viewer ─────────────────────────────────────────
     function openAR() {
       menuScreen.classList.add('hidden');
@@ -847,13 +883,21 @@
       document.body.style.overflow = '';
     }
 
-    // ── Trigger model-viewer's AR mode ─────────────────────────
+    // ── Trigger AR camera mode ─────────────────────────────────
+    // Opens the phone camera + places the burger on the real table
     function triggerARMode() {
-      const mv = document.getElementById('mv');
-      if (mv && mv.canActivateAR) {
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        showToast('AR requires HTTPS — deploy to Netlify or Vercel first');
+        return;
+      }
+      if (!mvLoaded) {
+        showToast('Model still loading — try again in a moment');
+        return;
+      }
+      if (mv.canActivateAR) {
         mv.activateAR();
       } else {
-        showToast('AR not supported on this device/browser. Try Chrome on Android or Safari on iOS.');
+        showToast('Use Chrome (Android) or Safari (iOS) for AR');
       }
     }
 
