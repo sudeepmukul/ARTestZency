@@ -760,36 +760,75 @@
       loading="eager"
       reveal="auto"
     >
-      <!-- Custom AR button inside model-viewer -->
-      <button
-        slot="ar-button"
-        style="
-          position: absolute;
-          bottom: 140px;
-          right: 20px;
-          background: rgba(232,184,75,0.15);
-          border: 1.5px solid rgba(232,184,75,0.5);
-          border-radius: 100px;
-          color: #e8b84b;
-          font-family: 'Outfit', sans-serif;
-          font-size: 13px;
-          font-weight: 600;
-          padding: 10px 20px;
-          cursor: pointer;
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          letter-spacing: 0.03em;
-        "
-      >
+      <!-- Custom AR button -->
+      <button slot="ar-button" style="
+        position:absolute;bottom:140px;right:20px;
+        background:rgba(232,184,75,0.15);
+        border:1.5px solid rgba(232,184,75,0.5);
+        border-radius:100px;color:#e8b84b;
+        font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;
+        padding:10px 20px;cursor:pointer;
+        backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+        display:flex;align-items:center;gap:8px;letter-spacing:0.03em;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
         </svg>
         Place on Table
       </button>
+
+      <!-- Scanning prompt — shown while ARCore/ARKit is finding the surface -->
+      <!-- Hides automatically once model is placed (ar-status="object-placed") -->
+      <div slot="ar-prompt" style="
+        position:absolute;
+        top:50%;left:50%;
+        transform:translate(-50%,-60%);
+        display:flex;flex-direction:column;
+        align-items:center;gap:16px;
+        pointer-events:none;">
+        <!-- Animated scanning ring -->
+        <div style="position:relative;width:80px;height:80px;">
+          <div style="
+            position:absolute;inset:0;
+            border-radius:50%;
+            border:2px solid rgba(232,184,75,0.25);"></div>
+          <div style="
+            position:absolute;inset:0;
+            border-radius:50%;
+            border:2px solid transparent;
+            border-top-color:#e8b84b;
+            animation:ar-spin 1.2s linear infinite;"></div>
+          <!-- Phone icon in center -->
+          <div style="
+            position:absolute;inset:0;
+            display:flex;align-items:center;justify-content:center;
+            animation:ar-tilt 1.8s ease-in-out infinite;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e8b84b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2"/>
+              <line x1="12" y1="18" x2="12" y2="18" stroke-width="2.5"/>
+            </svg>
+          </div>
+        </div>
+        <p style="
+          font-family:'Outfit',sans-serif;
+          font-size:13px;font-weight:400;
+          color:rgba(255,255,255,0.8);
+          text-align:center;line-height:1.5;
+          text-shadow:0 1px 8px rgba(0,0,0,0.9);
+          margin:0;max-width:200px;">
+          Slowly move your phone<br>over the table surface
+        </p>
+      </div>
     </model-viewer>
+
+    <style>
+      @keyframes ar-spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes ar-tilt {
+        0%,100% { transform: rotate(-12deg) translateY(0px); }
+        50%      { transform: rotate(12deg)  translateY(-4px); }
+      }
+    </style>
 
     <!-- Model loading indicator -->
     <div id="mv-loading" style="
