@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0c0c0c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Savour — AR Menu</title>
+
+  <!-- model-viewer for 3D/AR -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0c0c0c;
+      --surface:   #161616;
+      --card:      #1e1e1e;
+      --border:    rgba(255,255,255,0.07);
+      --gold:      #e8b84b;
+      --gold-dim:  #c9943a;
+      --text:      #f0ece4;
+      --muted:     #8a8478;
+      --danger:    #e85d42;
+      --font-serif: 'Cormorant Garamond', Georgia, serif;
+      --font-sans:  'Outfit', sans-serif;
+      --radius:    16px;
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ─── MENU SCREEN ─────────────────────────────────────────── */
+    #menu-screen {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #menu-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.97);
+    }
+
+    /* Header */
+    .header {
+      padding: 52px 24px 0;
+      position: relative;
+    }
+    .header-tag {
+      display: inline-block;
+      font-family: var(--font-sans);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gold);
+      background: rgba(232,184,75,0.1);
+      border: 1px solid rgba(232,184,75,0.2);
+      border-radius: 100px;
+      padding: 4px 12px;
+      margin-bottom: 14px;
+    }
+    .header h1 {
+      font-family: var(--font-serif);
+      font-size: 42px;
+      font-weight: 300;
+      line-height: 1.05;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .header h1 em {
+      font-style: italic;
+      color: var(--gold);
+    }
+    .header p {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 260px;
+    }
+
+    /* Table badge */
+    .table-badge {
+      position: absolute;
+      top: 52px;
+      right: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 14px;
+      text-align: center;
+    }
+    .table-badge span {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .table-badge strong {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.2;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 28px 24px 22px;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .divider span {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    /* ─── DISH CARD ──────────────────────────────────────────── */
+    .dish-card {
+      margin: 0 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.22s ease, box-shadow 0.22s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .dish-card:active {
+      transform: scale(0.978);
+    }
+
+    /* Image area */
+    .dish-img-wrap {
+      position: relative;
+      height: 230px;
+      background: radial-gradient(ellipse at 60% 40%, #2a1f0e 0%, #141414 70%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .dish-img-wrap img {
+      width: 88%;
+      height: 88%;
+      object-fit: contain;
+      filter: drop-shadow(0 20px 40px rgba(0,0,0,0.6));
+      transition: transform 0.5s ease;
+    }
+    .dish-card:hover .dish-img-wrap img {
+      transform: scale(1.04) translateY(-4px);
+    }
+
+    /* AR glow badge */
+    .ar-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(232,184,75,0.12);
+      border: 1px solid rgba(232,184,75,0.3);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 100px;
+      padding: 6px 12px 6px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+    }
+    .ar-badge .ar-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      border-radius: 50%;
+      animation: pulse-dot 1.8s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* Veg indicator */
+    .veg-dot {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 20px;
+      height: 20px;
+      background: #0c0c0c;
+      border: 1.5px solid #2d8a3e;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .veg-dot::after {
+      content: '';
+      width: 8px;
+      height: 8px;
+      background: #2d8a3e;
+      border-radius: 50%;
+    }
+
+    /* Card body */
+    .dish-body {
+      padding: 18px 20px 20px;
+    }
+    .dish-category {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .dish-name {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 400;
+      line-height: 1.1;
+      color: var(--text);
+    }
+    .dish-desc {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .dish-footer {
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .dish-price {
+      font-family: var(--font-serif);
+      font-size: 32px;
+      font-weight: 300;
+      color: var(--text);
+    }
+    .dish-price sup {
+      font-size: 14px;
+      vertical-align: super;
+      color: var(--muted);
+      font-family: var(--font-sans);
+    }
+    .view-ar-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--gold);
+      color: #0c0c0c;
+      border: none;
+      border-radius: 100px;
+      padding: 11px 20px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.02em;
+      transition: background 0.18s, transform 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .view-ar-btn:active { transform: scale(0.95); background: var(--gold-dim); }
+    .view-ar-btn svg { flex-shrink: 0; }
+
+    /* Info strip */
+    .info-strip {
+      display: flex;
+      gap: 8px;
+      padding: 20px 20px 0;
+    }
+    .info-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .info-chip svg { opacity: 0.6; }
+
+    /* Bottom space */
+    .spacer { height: 40px; }
+
+    /* ─── QR BUTTON ─────────────────────────────────────────── */
+    .qr-fab {
+      position: fixed;
+      bottom: calc(24px + var(--safe-bottom));
+      right: 24px;
+      width: 52px;
+      height: 52px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      transition: transform 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .qr-fab:active { transform: scale(0.92); }
+
+    /* ─── QR MODAL ──────────────────────────────────────────── */
+    #qr-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: flex-end;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #qr-modal.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .qr-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .qr-sheet {
+      position: relative;
+      width: 100%;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-radius: 24px 24px 0 0;
+      padding: 28px 24px calc(28px + var(--safe-bottom));
+      text-align: center;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+    #qr-modal.visible .qr-sheet {
+      transform: translateY(0);
+    }
+    .qr-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+    .qr-sheet h3 {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 400;
+      margin-bottom: 6px;
+    }
+    .qr-sheet p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 22px;
+    }
+    .qr-img-wrap {
+      width: 200px;
+      height: 200px;
+      margin: 0 auto 20px;
+      background: #fff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .qr-img-wrap img { width: 180px; height: 180px; }
+    .qr-url {
+      font-size: 11px;
+      color: var(--muted);
+      word-break: break-all;
+      background: var(--card);
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    .qr-close {
+      width: 100%;
+      padding: 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    /* ─── AR VIEWER SCREEN ──────────────────────────────────── */
+    #ar-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      background: #000;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(24px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    #ar-screen.visible {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateY(0);
+    }
+
+    /* model-viewer fills the screen */
+    #mv {
+      flex: 1;
+      width: 100%;
+      background: radial-gradient(ellipse at 50% 60%, #1a1208 0%, #000 70%);
+      --progress-bar-color: var(--gold);
+      --poster-color: #000;
+    }
+
+    /* Close button */
+    .close-btn {
+      position: absolute;
+      top: 52px;
+      left: 20px;
+      z-index: 10;
+      width: 40px;
+      height: 40px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.18s;
+    }
+    .close-btn:active { transform: scale(0.9); }
+
+    /* Dish info overlay — top */
+    .dish-overlay-top {
+      position: absolute;
+      top: 44px;
+      left: 72px;
+      right: 20px;
+      z-index: 10;
+    }
+    .dish-overlay-top .o-category {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 4px;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+    }
+    .dish-overlay-top .o-name {
+      font-family: var(--font-serif);
+      font-size: 28px;
+      font-weight: 400;
+      color: #fff;
+      line-height: 1.1;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.9);
+    }
+    .dish-overlay-top .o-price {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      color: var(--gold);
+      text-shadow: 0 1px 8px rgba(0,0,0,0.8);
+      margin-top: 3px;
+    }
+
+    /* Bottom action bar */
+    .ar-bottom {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 20px 20px calc(20px + var(--safe-bottom));
+      background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%);
+    }
+
+    /* Hint */
+    .ar-hint {
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .ar-hint::before, .ar-hint::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Action row */
+    .action-row {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* Place in room (AR) button */
+    .btn-ar {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.14);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 14px;
+      padding: 14px;
+      color: #fff;
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 400;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.18s;
+    }
+    .btn-ar:active { background: rgba(255,255,255,0.14); }
+
+    /* Buy button */
+    .btn-buy {
+      flex: 1.4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--gold);
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      color: #0c0c0c;
+      font-family: var(--font-sans);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.01em;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.18s, background 0.18s;
+    }
+    .btn-buy:active { transform: scale(0.96); background: var(--gold-dim); }
+
+    /* ─── TOAST ─────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(30px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--text);
+      color: #0c0c0c;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 12px 22px;
+      border-radius: 100px;
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ─── ENTRANCE ANIMATION ────────────────────────────────── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeUp 0.6s ease forwards;
+    }
+    .fade-up:nth-child(1) { animation-delay: 0.05s; }
+    .fade-up:nth-child(2) { animation-delay: 0.15s; }
+    .fade-up:nth-child(3) { animation-delay: 0.25s; }
+    .fade-up:nth-child(4) { animation-delay: 0.32s; }
+    .fade-up:nth-child(5) { animation-delay: 0.38s; }
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       MENU SCREEN
+  ═══════════════════════════════════════════ -->
+  <div id="menu-screen">
+
+    <div class="header fade-up">
+      <div class="table-badge">
+        <span>Table</span>
+        <strong>04</strong>
+      </div>
+      <div class="header-tag">&#9679; AR-Powered Menu</div>
+      <h1>Today's <em>Signature</em><br>Selection</h1>
+      <p>Tap any dish to view it in 3D — or place it right on your table.</p>
+    </div>
+
+    <div class="divider fade-up"><span>Featured Dish</span></div>
+
+    <!-- ── Burger Card ── -->
+    <div class="dish-card fade-up" onclick="openAR()">
+      <div class="dish-img-wrap">
+        <!-- Replace with your own food image -->
+        <img
+          src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&q=85&auto=format"
+          alt="Classic Smash Burger"
+          loading="eager"
+        />
+        <div class="veg-dot"></div>
+        <div class="ar-badge">
+          <div class="ar-dot"></div>
+          View in AR
+        </div>
+      </div>
+
+      <div class="dish-body">
+        <div class="dish-category">Burgers &amp; Grills</div>
+        <div class="dish-name">Classic Smash<br>Burger</div>
+        <div class="dish-desc">Double smashed patty, cheddar, caramelised onions, house sauce, brioche bun.</div>
+        <div class="dish-footer">
+          <div class="dish-price"><sup>₹</sup>349</div>
+          <button class="view-ar-btn" onclick="event.stopPropagation(); openAR()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+            View in 3D
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info chips -->
+    <div class="info-strip fade-up">
+      <div class="info-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        20–25 min
+      </div>
+      <div class="info-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        680 kcal
+      </div>
+      <div class="info-chip">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Chef's pick
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+  </div>
+
+  <!-- QR FAB -->
+  <button class="qr-fab" onclick="openQR()" title="Show QR Code">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8a8478" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+      <rect x="5" y="5" width="3" height="3" fill="#8a8478" stroke="none"/><rect x="16" y="5" width="3" height="3" fill="#8a8478" stroke="none"/><rect x="5" y="16" width="3" height="3" fill="#8a8478" stroke="none"/>
+      <line x1="14" y1="14" x2="14" y2="14" stroke-width="3"/><line x1="17" y1="14" x2="17" y2="14" stroke-width="3"/><line x1="20" y1="14" x2="20" y2="14" stroke-width="3"/>
+      <line x1="14" y1="17" x2="14" y2="17" stroke-width="3"/><line x1="20" y1="17" x2="20" y2="17" stroke-width="3"/>
+      <line x1="14" y1="20" x2="14" y2="20" stroke-width="3"/><line x1="17" y1="20" x2="17" y2="20" stroke-width="3"/><line x1="20" y1="20" x2="20" y2="20" stroke-width="3"/>
+    </svg>
+  </button>
+
+
+  <!-- ══════════════════════════════════════════
+       QR MODAL
+  ═══════════════════════════════════════════ -->
+  <div id="qr-modal">
+    <div class="qr-backdrop" onclick="closeQR()"></div>
+    <div class="qr-sheet">
+      <div class="qr-handle"></div>
+      <h3>Scan to Open Menu</h3>
+      <p>Show this to customers — place on table or print.</p>
+      <div class="qr-img-wrap">
+        <img id="qr-img" src="" alt="QR Code" />
+      </div>
+      <div class="qr-url" id="qr-url-text"></div>
+      <button class="qr-close" onclick="closeQR()">Close</button>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════
+       AR / 3D VIEWER SCREEN
+  ═══════════════════════════════════════════ -->
+  <div id="ar-screen">
+
+    <!-- model-viewer -->
+    <!--
+      ⬇️  REPLACE the `src` below with your own .glb food model URL.
+      Free food GLBs: https://poly.pizza  (search "burger")
+      Or: https://sketchfab.com/features/gltf
+      The current model is a placeholder from Google's model-viewer demos.
+    -->
+    <model-viewer
+      id="mv"
+      src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+      ar
+      ar-modes="webxr scene-viewer quick-look"
+      camera-controls
+      auto-rotate
+      auto-rotate-delay="1000"
+      rotation-per-second="20deg"
+      shadow-intensity="1"
+      exposure="0.8"
+      poster="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=70&auto=format"
+      loading="eager"
+      reveal="auto"
+    >
+      <!-- Custom AR button inside model-viewer -->
+      <button
+        slot="ar-button"
+        style="
+          position: absolute;
+          bottom: 140px;
+          right: 20px;
+          background: rgba(232,184,75,0.15);
+          border: 1.5px solid rgba(232,184,75,0.5);
+          border-radius: 100px;
+          color: #e8b84b;
+          font-family: 'Outfit', sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 10px 20px;
+          cursor: pointer;
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          letter-spacing: 0.03em;
+        "
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+        </svg>
+        Place on Table
+      </button>
+    </model-viewer>
+
+    <!-- Close -->
+    <button class="close-btn" onclick="closeAR()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+
+    <!-- Dish info overlay — top right -->
+    <div class="dish-overlay-top">
+      <div class="o-category">Burgers &amp; Grills</div>
+      <div class="o-name">Classic Smash Burger</div>
+      <div class="o-price">₹349</div>
+    </div>
+
+    <!-- Bottom actions -->
+    <div class="ar-bottom">
+      <div class="ar-hint">Drag to rotate &nbsp;·&nbsp; Pinch to zoom</div>
+      <div class="action-row">
+        <button class="btn-ar" onclick="triggerARMode()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          See in Room
+        </button>
+        <button class="btn-buy" onclick="addToCart()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          Add to Order — ₹349
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Toast -->
+  <div id="toast">&#10003; Added to your order!</div>
+
+
+  <script>
+    // ── State ──────────────────────────────────────────────────
+    const menuScreen = document.getElementById('menu-screen');
+    const arScreen   = document.getElementById('ar-screen');
+    const toast      = document.getElementById('toast');
+
+    // ── Open AR viewer ─────────────────────────────────────────
+    function openAR() {
+      menuScreen.classList.add('hidden');
+      arScreen.classList.add('visible');
+      document.body.style.overflow = 'hidden';
+    }
+
+    // ── Close AR viewer ────────────────────────────────────────
+    function closeAR() {
+      arScreen.classList.remove('visible');
+      menuScreen.classList.remove('hidden');
+      document.body.style.overflow = '';
+    }
+
+    // ── Trigger model-viewer's AR mode ─────────────────────────
+    function triggerARMode() {
+      const mv = document.getElementById('mv');
+      if (mv && mv.canActivateAR) {
+        mv.activateAR();
+      } else {
+        showToast('AR not supported on this device/browser. Try Chrome on Android or Safari on iOS.');
+      }
+    }
+
+    // ── Add to cart ────────────────────────────────────────────
+    function addToCart() {
+      showToast('✓ Classic Smash Burger added!');
+      setTimeout(closeAR, 1200);
+    }
+
+    // ── Toast helper ───────────────────────────────────────────
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    // ── QR Code ────────────────────────────────────────────────
+    function openQR() {
+      const url = window.location.href;
+      const encoded = encodeURIComponent(url);
+      document.getElementById('qr-img').src =
+        `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encoded}&color=0c0c0c&bgcolor=ffffff`;
+      document.getElementById('qr-url-text').textContent = url;
+      document.getElementById('qr-modal').classList.add('visible');
+    }
+
+    function closeQR() {
+      document.getElementById('qr-modal').classList.remove('visible');
+    }
+
+    // ── Handle back button on Android ─────────────────────────
+    window.addEventListener('popstate', () => {
+      if (arScreen.classList.contains('visible')) closeAR();
+    });
+  </script>
+
+</body>
+</html>
